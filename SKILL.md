@@ -86,7 +86,8 @@ For each extracted item, determine:
 - `description`: 2-4 sentences with context from the conversation. Include evidence/numbers if mentioned.
 - `type`: `code` (engineer can implement) or `idea` (requires business decision)
 - `priority`: 1=Urgent, 2=High, 3=Medium, 4=Low
-- `labels`: from available labels: `💰 Revenue`, `Bug`, `Improvement`, `Feature`
+- `labels`: from available labels: `💰 Revenue`, `⚡ Fast Win`, `🎨 UI`
+- `style`: Ideas project descriptions must be **2-3 sentences max** — what's the idea, why it matters, key evidence. NO implementation details, NO DB columns, NO code paths, NO exact pricing, NO Chinese UI copy strings. Code project descriptions can be more specific.
 
 ### Step 3 — Deduplicate and decide action for each item
 
@@ -139,8 +140,10 @@ If ALL items were already tracked and no extensions were made, say exactly:
 8. **Never create issues about** the Linear sync process itself, skill execution, or meta-process.
 9. **Never create issues about things the user rejected** or dismissed in conversation.
 10. **Never use the `research` tool** — it's AI-powered and redundant. Use `list_issues` with filters.
-11. **Available labels**: `💰 Revenue`, `Bug`, `Improvement`, `Feature` — use the most relevant one(s).
-12. **Available statuses**: Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate — new issues default to Backlog.
-13. **The two target projects are fixed** — never create issues in other projects.
-14. **Team is always `Pime`.**
-15. **When updating an existing issue**, pass its `id` (e.g. `PIM-370`) to `save_issue`. When creating new, do NOT pass `id`.
+11. **Available labels**: `💰 Revenue`, `⚡ Fast Win`, `🎨 UI` — use the most relevant one(s). Do NOT use `Bug`, `Feature`, or `Improvement` (bugs go in the code project, the project split already handles the distinction).
+12. **Ideas project style**: Descriptions must be 2-3 sentences max. What's the idea, why it matters, key evidence. NO implementation details, NO DB columns, NO code paths, NO exact pricing, NO Chinese UI copy. Code project descriptions can be more specific.
+13. **Use `state` parameter** (not `status`) when changing issue status via `save_issue`.
+14. **Available statuses**: Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate — new issues default to Backlog.
+15. **The two target projects are fixed** — never create issues in other projects.
+16. **Team is always `Pime`.**
+17. **When updating an existing issue**, pass its `id` (e.g. `PIM-370`) to `save_issue`. When creating new, do NOT pass `id`.
