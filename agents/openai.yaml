@@ -1,0 +1,4 @@
+interface:
+  display_name: "Conversation to Linear"
+  short_description: "Sync clean, non-duplicate conversation outcomes into Linear"
+  default_prompt: "Use $conversation-to-linear to extract only explicit, stack-realistic, monetization-relevant items from the current thread or an explicitly requested recent-history window, dedupe them against both Linear target projects, and create or extend only genuinely useful issues."

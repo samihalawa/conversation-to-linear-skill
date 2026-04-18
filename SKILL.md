@@ -1,149 +1,334 @@
 ---
 name: conversation-to-linear
 description: >
-  Extract actionable items from the current conversation and create Linear issues, deduplicating against existing issues.
-  Use when: user says "sync to linear", "create linear issues", "add to linear", "update linear from this chat",
-  or at the end of an analysis/brainstorm session to capture outcomes.
-  Idempotent: running multiple times in the same conversation only adds genuinely new items not already in Linear.
+  Extract actionable items from the current conversation or an explicitly requested recent-history window and sync only genuinely useful,
+  non-duplicate items into Linear. Best for Oulang work when the user says "sync to linear", "add to linear", "scan recent conversations",
+  or wants opportunities captured after analysis.
 ---
 
-# Conversation → Linear Issue Sync Skill
+# Conversation to Linear
 
 ## Purpose
 
-Scan the current conversation for **explicitly mentioned** actionable items (bugs, features, ideas, monetization plays, implementation tasks) and sync them to Linear — deduplicating against what already exists, extending existing issues when valuable new info is found, and creating new issues only when genuinely needed.
+Turn real conversation output into clean Linear tracking without polluting the backlog.
 
-## Target Projects (FIXED — never change these)
+This skill is for:
 
-| Project | Purpose | Route here when... |
-|---------|---------|--------------------|
-| `samihalawa/2026-MANUS-oulang` | Code/dev/implementation work | Bug fixes, feature implementations, technical debt, infrastructure, UX fixes, code cleanup — anything an engineer could implement |
-| `Oulang Ideas & Inspirations` | Strategy/ideas/business decisions | Business strategy, monetization plays, pricing changes, partnership moves, market analysis insights — requires human/business decision |
+- current-thread issue capture
+- explicit recent-history scans such as "since last run", "last 24h", or "recent conversations"
+- Oulang opportunity capture after analysis, especially monetization, conversion, trust, and revenue-leak themes
 
-**Team**: always `Pime`
+This skill is not for:
 
-## Available Linear Tools (USE ONLY THESE)
+- dumping every idea into Linear
+- copying raw analysis into tickets
+- inventing speculative roadmap items
 
-| Tool | Purpose | When to use |
-|------|---------|-------------|
-| `list_issues` | List issues with filters | ALWAYS first — fetch all existing issues from both projects |
-| `get_issue` | Get full issue details | When title match is close but you need full description to confirm duplicate |
-| `save_issue` | Create or update an issue | Create new issues OR update existing ones (pass `id` to update) |
-| `list_comments` | List comments on an issue | Check if insight was already added as a comment |
-| `save_comment` | Add comment to an issue | Extend an existing issue with new valuable info |
-| `list_issue_labels` | List available labels | Reference for valid label names |
-| `list_issue_statuses` | List available statuses | Reference for valid status names |
-| `list_projects` | List projects | Verify project names if needed |
+## Hard Outcome
 
-### ⛔ NEVER USE: `research` tool
+By the end of the run, every selected item must be one of:
 
-The `research` tool is an AI-powered search — you ARE already AI. Using it is redundant and wastes a call. Always use `list_issues` with filters instead.
+- `created`
+- `extended`
+- `already_tracked`
+- `rejected_for_fit`
+
+If nothing qualifies, say exactly:
+
+> "All items from this conversation are already tracked in Linear — nothing new to add."
+
+## Fixed Targets
+
+| Project | Use when |
+| --- | --- |
+| `samihalawa/2026-MANUS-oulang` | code fixes, implementation tasks, technical debt, UX fixes, instrumentation, operational debugging |
+| `Oulang Ideas & Inspirations` | business ideas, monetization opportunities, product opportunities, strategic insights |
+
+Team is always `Pime`.
+
+## Actual Tooling Rules
+
+Use only the Linear tools that actually exist in the environment.
+
+Expected core tools:
+
+- `list_issues`
+- `save_issue`
+- `fetch`
+- optionally `list_comments` if available
+
+Do not assume tools like `save_comment`, `get_issue`, or `list_projects` exist unless you verified them in the current environment.
+
+If comments are unsupported, extend existing issues by updating the issue description with `save_issue(id=...)` only when the addition is clearly valuable and non-destructive.
+
+## Two Modes
+
+### 1. Current-thread mode
+
+Default mode.
+
+Use when the user asks to sync this conversation or add items from the current chat.
+
+Sources:
+
+- current conversation only
+
+### 2. Recent-history mode
+
+Use only when the user explicitly asks to scan beyond the current thread with wording like:
+
+- "scan recent conversations"
+- "since last run"
+- "last 24h"
+- "from recent logs/notes"
+
+Sources:
+
+- current conversation
+- recent local conversation history
+- optionally recent Notion or Google Drive notes if the user explicitly asked for those source families
+
+When using recent-history mode, follow the source-discipline patterns from `$conversation-history-recovery-skill`:
+
+- build a source ledger first
+- state what sources were fully read vs sampled
+- prefer recent, relevant sources over broad archive trawls
+- do not claim full coverage if you sampled
+
+The purpose here is not a full forensic report. It is targeted issue extraction from recent evidence.
 
 ## Idempotency Contract
 
-This skill is safe to run repeatedly in the same conversation:
+Safe to run repeatedly.
 
-1. **First run**: Lists all existing issues, extracts conversation items, creates only genuinely new ones.
-2. **Second+ run**: Re-fetches existing issues (including those just created), compares again. Only adds genuinely new items or extends existing ones with valuable new info.
-3. **Nothing new**: If all items are already tracked and no valuable extensions exist, respond exactly:
-   > "All items from this conversation are already tracked in Linear — nothing new to add."
+1. Fetch existing issues first.
+2. Compare candidate items against the live backlog.
+3. Only create items that are genuinely new.
+4. Prefer extending an existing issue over creating a sibling duplicate.
+
+## Selection Standard
+
+A candidate item must pass all required gates.
+
+### Gate 1: Explicitness
+
+The item must be explicitly stated in the conversation or directly implied by a concrete analytical conclusion in the same conversation.
+
+Allowed:
+
+- "add this to Linear"
+- "this is a revenue leak"
+- "this should become an issue"
+- a clearly stated opportunity after analysis
+
+Not allowed:
+
+- background context
+- generic observations with no action
+- examples or hypotheticals
+- "could maybe someday" speculation
+
+### Gate 2: Stack-fit
+
+The item must make sense for the current product and codebase.
+
+Prefer:
+
+- improvements that reuse existing routes, features, or data
+- low-schema or no-schema opportunities
+- fixes or ideas that fit the current marketplace, jobs, talent, chat, recharge, premium, and admin surfaces
+
+Reject or down-rank:
+
+- ideas that need a replatform
+- ideas that assume a totally different app architecture
+- ideas that require large speculative DB redesigns
+- ideas that mostly copy competitor implementation details rather than product logic
+
+### Gate 3: Monetization relevance
+
+For Oulang-focused runs, prefer only items that are directly or indirectly monetization-relevant:
+
+- direct revenue opportunities
+- conversion improvements
+- trust/quality fixes that protect monetization
+- broken commercial flows
+- ugly or confusing user-facing defects that make revenue surfaces look weak
+
+Do not add edge enhancements unless the user explicitly asks for a broad backlog sweep.
+
+### Gate 4: Non-duplication
+
+If the same core action or opportunity already exists in Linear, do not create a duplicate.
+
+When in doubt, it is already tracked.
+
+## Candidate Scoring
+
+Use this scoring lens before creating anything:
+
+- `impact`: does it plausibly improve revenue, conversion, retention, or trust?
+- `fit`: does it fit the current stack and existing product shape?
+- `effort realism`: can it start without major schema upheaval?
+- `appeal`: would this feel obviously useful to the product, not just technically clever?
+
+Only create issues that are high enough on all four.
 
 ## Workflow
 
-### Step 1 — Fetch ALL existing Linear issues (ALWAYS DO THIS FIRST)
+### Step 1. Build a source ledger
 
-Before extracting anything from the conversation, fetch the complete issue list from BOTH projects:
+Before extraction, list the exact sources you will use.
 
-```
+For current-thread mode:
+
+- current conversation
+
+For recent-history mode:
+
+- current conversation
+- selected recent Codex sessions
+- selected recent Claude sessions
+- selected recent repo notes / docs / Notion / Drive items if explicitly requested
+
+Record whether each source was fully read or sampled.
+
+### Step 2. Fetch existing issues first
+
+Always fetch both target projects before extracting candidates:
+
+```text
 list_issues(project="samihalawa/2026-MANUS-oulang", team="Pime", limit=250)
 list_issues(project="Oulang Ideas & Inspirations", team="Pime", limit=250)
 ```
 
-Build a compact inventory of all existing issues. Output this inventory as a compact paragraph:
+Build a compact inventory of likely duplicates.
 
-> **Existing issues (X total across 2 projects):** PIM-332: Reprice tiers, PIM-333: Payment CTA at free_limit wall, PIM-334: Gate contact reveals, ...
+### Step 3. Extract candidate items
 
-This inventory is essential context for deduplication.
+For each candidate capture:
 
-### Step 2 — Extract conversation items
+- `title`
+- `description`
+- `type`: `code` or `idea`
+- `priority`
+- `labels`
+- `source_refs`
+- `why_now`
 
-Scan ALL previous messages in the current conversation (both user and assistant). Extract only items that are:
+### Step 4. Dedupe aggressively
 
-- **Explicitly stated** as tasks, bugs, ideas, features, fixes, or action items
-- **Concrete enough** to be an issue (not vague discussion or context)
-- **Mentioned in the main conversation flow** (not just metadata or skill instructions)
+For each candidate, decide one:
 
-Do NOT extract items from:
-- General discussion, background context, or preamble
-- Questions asked but not answered with a decision
-- Things mentioned only as examples or hypotheticals
-- Information that is purely analytical with no action implied
-- Things the user rejected or dismissed in conversation
-- The Linear sync process itself
+- `already_tracked`
+- `extend_existing`
+- `create_new`
+- `reject_for_fit`
 
-For each extracted item, determine:
-- `title`: concise, consistent tone — not too specific (no filenames), not too vague. Same style as existing issues.
-- `description`: 2-4 sentences with context from the conversation. Include evidence/numbers if mentioned.
-- `type`: `code` (engineer can implement) or `idea` (requires business decision)
-- `priority`: 1=Urgent, 2=High, 3=Medium, 4=Low
-- `labels`: from available labels: `💰 Revenue`, `⚡ Fast Win`, `🎨 UI`
-- `style`: Ideas project descriptions must be **2-3 sentences max** — what's the idea, why it matters, key evidence. NO implementation details, NO DB columns, NO code paths, NO exact pricing, NO Chinese UI copy strings. Code project descriptions can be more specific.
+Check similarity by:
 
-### Step 3 — Deduplicate and decide action for each item
+- title concept
+- action/outcome
+- same product surface
+- same monetization or bug class
 
-For each conversation item, compare against the existing issue inventory:
+### Step 5. Prefer extending over duplicating
 
-#### Action 1: SKIP (already tracked)
-If an existing issue covers the same concept — even if worded differently — mark it as "already tracked".
-Be aggressive about deduplication. When in doubt, it's already tracked.
+If an issue already exists and the conversation adds real value:
 
-#### Action 2: EXTEND (existing issue + valuable new info)
-If an existing issue covers the same topic BUT the conversation contains genuinely valuable new data (numbers, evidence, a sub-task, a new angle), then EXTEND it:
-- **Option A**: Use `save_comment` to add a comment with the new insight to the existing issue.
-- **Option B**: If the new info is a distinct sub-task, use `save_issue` with `parentId` set to the existing issue ID to create a sub-issue.
-- Choose Option A (comment) by default. Only use Option B (sub-issue) if the new info is a clearly separate actionable task.
+- new evidence
+- new numbers
+- sharper scope
+- clearer stack-fit framing
 
-#### Action 3: CREATE (genuinely new)
-If no existing issue covers this concept at all, create a new issue:
-- `code` type → project: `samihalawa/2026-MANUS-oulang`
-- `idea` type → project: `Oulang Ideas & Inspirations`
-- team: `Pime`
-- Use `save_issue` with: title, description, priority, labels, project, team.
+then update that issue instead of creating a sibling ticket.
 
-### Step 4 — Execute actions
+Only create a new issue when the task is materially separate.
 
-For each item, execute the decided action (skip / comment / sub-issue / create).
+### Step 6. Route to the correct project
 
-### Step 5 — Report
+- `code` -> `samihalawa/2026-MANUS-oulang`
+- `idea` -> `Oulang Ideas & Inspirations`
 
-Output a summary table:
+### Step 7. Write clean issues
+
+#### Title rules
+
+- concise
+- action-oriented
+- no filenames
+- no line numbers
+- no raw SQL
+- no noisy jargon unless central to the task
+
+#### Description rules
+
+For ideas:
+
+- 2-4 short sentences
+- say what the opportunity is
+- why it matters
+- why it fits now
+
+For code issues:
+
+- concrete current problem
+- expected outcome
+- key evidence if relevant
+
+Do not dump raw logs or giant analysis text into the issue.
+
+## Priority Heuristics
+
+- `1 Urgent`: active revenue leak, broken payment/commercial flow, severe trust break on a monetization-critical surface
+- `2 High`: strong monetization or conversion upside, high-confidence fit, likely near-term value
+- `3 Medium`: useful but less immediate
+- `4 Low`: only if still clearly worth tracking
+
+## Labels
+
+Prefer a small label set.
+
+Use only labels that actually exist in the workspace when possible. Typical useful choices:
+
+- `💰 Revenue`
+- `⚡ Fast Win`
+- `🎨 UI`
+
+If label availability is unclear, create the issue without forcing bad labels.
+
+## Oulang-specific Guardrails
+
+For Oulang-oriented runs:
+
+- prefer marketplace, jobs, talent, chat, recharge, premium, admin, merchant, and listings surfaces
+- prefer opportunities that tighten the loop:
+  - discover -> contact -> transact/promote -> return -> manage
+- reject giant speculative ideas that would obviously require a new product architecture
+- reject things that are interesting but not useful or appealing for current users
+
+## Report Format
+
+Return a compact table:
 
 | Status | Issue | Project | Action |
-|--------|-------|---------|--------|
+| --- | --- | --- | --- |
 | ✅ Created | PIM-XXX: title | project | New issue |
-| 📝 Extended | PIM-YYY: title | project | Added comment/sub-issue |
+| 📝 Extended | PIM-YYY: title | project | Updated existing issue |
 | ⏭️ Already tracked | PIM-ZZZ: title | project | No action needed |
-| 🚫 Nothing new | — | — | — |
+| 🚫 Rejected for fit | candidate title | — | Not added |
 
-If ALL items were already tracked and no extensions were made, say exactly:
+If all items were already tracked or rejected, use the exact required sentence:
+
 > "All items from this conversation are already tracked in Linear — nothing new to add."
 
-## Hard Rules
+## Non-Negotiable Rules
 
-1. **ONLY extract items explicitly mentioned in conversation messages.** Never invent or extrapolate.
-2. **ALWAYS fetch existing issues FIRST** before extracting or creating anything.
-3. **ALWAYS output the compact existing-issues inventory** so the user can see what's already tracked.
-4. **Deduplicate aggressively** — false negatives (missing a new item) are better than false positives (creating duplicates).
-5. **Extend over create** — if the idea exists but has new valuable info, add a comment rather than a new issue.
-6. **Sub-issues only when clearly a separate actionable task** under an existing parent concept.
-7. **Consistent tone** — titles should be concise, action-oriented, same style as existing issues. Not too specific (no filenames/line numbers), not too vague.
-8. **Never create issues about** the Linear sync process itself, skill execution, or meta-process.
-9. **Never create issues about things the user rejected** or dismissed in conversation.
-10. **Never use the `research` tool** — it's AI-powered and redundant. Use `list_issues` with filters.
-11. **Available labels**: `💰 Revenue`, `⚡ Fast Win`, `🎨 UI` — use the most relevant one(s). Do NOT use `Bug`, `Feature`, or `Improvement` (bugs go in the code project, the project split already handles the distinction).
-12. **Ideas project style**: Descriptions must be 2-3 sentences max. What's the idea, why it matters, key evidence. NO implementation details, NO DB columns, NO code paths, NO exact pricing, NO Chinese UI copy. Code project descriptions can be more specific.
-13. **Use `state` parameter** (not `status`) when changing issue status via `save_issue`.
-14. **Available statuses**: Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate — new issues default to Backlog.
-15. **The two target projects are fixed** — never create issues in other projects.
-16. **Team is always `Pime`.**
-17. **When updating an existing issue**, pass its `id` (e.g. `PIM-370`) to `save_issue`. When creating new, do NOT pass `id`.
+1. Fetch existing issues before creating anything.
+2. Do not create duplicates when an existing issue is close enough.
+3. Do not create issues from vague context or raw brainstorming alone.
+4. Do not add items the user rejected.
+5. Do not add meta-issues about the sync process itself.
+6. In recent-history mode, make source coverage explicit.
+7. For Oulang runs, prioritize monetization-relevant, stack-realistic, low-schema items.
+8. A smaller, cleaner backlog is better than a comprehensive noisy one.
