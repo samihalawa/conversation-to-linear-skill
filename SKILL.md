@@ -46,6 +46,14 @@ If nothing qualifies, say exactly:
 
 Team is always `Pime`.
 
+These project names are not advisory. They are the required routing contract.
+
+- `samihalawa/2026-MANUS-oulang` is for real code work and execution-backed product/debugging tasks.
+- `Oulang Ideas & Inspirations` is for opportunities, ideas, strategy, monetization concepts, and product directions that are not yet implementation tasks.
+- If the best matching existing issue is in the wrong project, move that issue to the correct project instead of duplicating it.
+- Never leave a clear idea/opportunity in `samihalawa/2026-MANUS-oulang` just because it was created there historically.
+- Never leave a real implementation/debugging issue in `Oulang Ideas & Inspirations` just because it was brainstormed there first.
+
 ## Actual Tooling Rules
 
 Use only the Linear tools that actually exist in the environment.
@@ -55,9 +63,17 @@ Expected core tools:
 - `list_issues`
 - `save_issue`
 - `fetch`
-- optionally `list_comments` if available
+- `save_comment` if available
+- `research` when you need cross-issue or project-aware Linear reasoning
+- `list_issue_statuses` when status names are unclear in the current workspace
 
-Do not assume tools like `save_comment`, `get_issue`, or `list_projects` exist unless you verified them in the current environment.
+Do not assume tools like `get_issue` or `list_projects` exist unless you verified them in the current environment.
+
+Use the full Linear surface when available:
+
+- fetch full issue content before deciding a duplicate is “close enough”
+- read issue descriptions, comments, labels, statuses, assignees, project, and relations when they matter
+- prefer `research` over brittle multi-step guessing when the question spans projects, issue movement, or historical cleanup intent
 
 If comments are unsupported, extend existing issues by updating the issue description with `save_issue(id=...)` only when the addition is clearly valuable and non-destructive.
 
@@ -105,6 +121,7 @@ Safe to run repeatedly.
 2. Compare candidate items against the live backlog.
 3. Only create items that are genuinely new.
 4. Prefer extending an existing issue over creating a sibling duplicate.
+5. If an issue is materially correct but lives in the wrong project, re-home it instead of creating a new one.
 
 ## Selection Standard
 
@@ -163,6 +180,12 @@ If the same core action or opportunity already exists in Linear, do not create a
 
 When in doubt, it is already tracked.
 
+Misfiled issues are not “new.” They are routing mistakes.
+
+- If an idea exists in `samihalawa/2026-MANUS-oulang`, fix the project field and continue from the same issue.
+- If a real implementation item exists in `Oulang Ideas & Inspirations`, move it into `samihalawa/2026-MANUS-oulang`.
+- Only create a fresh issue when the action is materially different, not just better filed.
+
 ## Candidate Scoring
 
 Use this scoring lens before creating anything:
@@ -204,6 +227,12 @@ list_issues(project="Oulang Ideas & Inspirations", team="Pime", limit=250)
 
 Build a compact inventory of likely duplicates.
 
+Also build a compact inventory of likely routing mistakes:
+
+- opportunities or idea-language issues living in `samihalawa/2026-MANUS-oulang`
+- real code/debugging/UX-fix issues living in `Oulang Ideas & Inspirations`
+- addressed or canceled items that should block new creation
+
 ### Step 3. Extract candidate items
 
 For each candidate capture:
@@ -222,6 +251,7 @@ For each candidate, decide one:
 
 - `already_tracked`
 - `extend_existing`
+- `move_existing`
 - `create_new`
 - `reject_for_fit`
 
@@ -231,6 +261,7 @@ Check similarity by:
 - action/outcome
 - same product surface
 - same monetization or bug class
+- same core job, even if the current project assignment is wrong
 
 ### Step 5. Prefer extending over duplicating
 
@@ -245,10 +276,23 @@ then update that issue instead of creating a sibling ticket.
 
 Only create a new issue when the task is materially separate.
 
+If the issue already exists but is in the wrong project:
+
+- move the existing issue to the correct project first
+- then extend it if useful
+- do not leave the misfiled issue behind as historical clutter
+
 ### Step 6. Route to the correct project
 
 - `code` -> `samihalawa/2026-MANUS-oulang`
 - `idea` -> `Oulang Ideas & Inspirations`
+
+Project routing examples:
+
+- “Fix the Twilio spend guardrail regression” -> `samihalawa/2026-MANUS-oulang`
+- “Test a jobs employer punch-card package” -> `Oulang Ideas & Inspirations`
+- “Investigate dead clicks on a monetization surface” -> `samihalawa/2026-MANUS-oulang`
+- “Consider optional WhatsApp / WeCom re-engagement channel strategy” -> `Oulang Ideas & Inspirations`
 
 ### Step 7. Write clean issues
 
@@ -277,6 +321,12 @@ For code issues:
 - key evidence if relevant
 
 Do not dump raw logs or giant analysis text into the issue.
+
+For moved issues:
+
+- preserve the existing issue whenever possible
+- update the description only enough to explain the corrected routing or sharper scope
+- do not rewrite useful history out of the ticket
 
 ## Priority Heuristics
 
@@ -322,6 +372,8 @@ If all items were already tracked or rejected, use the exact required sentence:
 
 > "All items from this conversation are already tracked in Linear — nothing new to add."
 
+If items were moved but no new ones were created, report them explicitly in the table rather than pretending nothing changed.
+
 ## Non-Negotiable Rules
 
 1. Fetch existing issues before creating anything.
@@ -332,3 +384,5 @@ If all items were already tracked or rejected, use the exact required sentence:
 6. In recent-history mode, make source coverage explicit.
 7. For Oulang runs, prioritize monetization-relevant, stack-realistic, low-schema items.
 8. A smaller, cleaner backlog is better than a comprehensive noisy one.
+9. Misfiled issues must be moved to the correct project, not duplicated.
+10. Do not treat “already addressed,” “canceled,” or “hallucinated” items as fresh candidates unless new evidence materially reopens them.
