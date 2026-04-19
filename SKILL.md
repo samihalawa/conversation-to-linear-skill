@@ -75,6 +75,12 @@ Use the full Linear surface when available:
 - read issue descriptions, comments, labels, statuses, assignees, project, and relations when they matter
 - prefer `research` over brittle multi-step guessing when the question spans projects, issue movement, or historical cleanup intent
 
+Tool discovery is not enough by itself.
+
+- If `research`, `fetch`, `save_comment`, or any other advanced tool errors on first real use, immediately fall back to the verified core tools instead of continuing as if the tool exists.
+- Do not write a workflow that depends on `research` unless the current environment actually executes it successfully.
+- Record the fallback in the run notes so future passes do not repeat the same broken assumption.
+
 If comments are unsupported, extend existing issues by updating the issue description with `save_issue(id=...)` only when the addition is clearly valuable and non-destructive.
 
 ## Two Modes
@@ -113,6 +119,13 @@ When using recent-history mode, follow the source-discipline patterns from `$con
 
 The purpose here is not a full forensic report. It is targeted issue extraction from recent evidence.
 
+If the user explicitly asks for `code issues`, `regressions`, or `not opportunities`, enforce that filter strictly even in recent-history mode:
+
+- exclude product ideas
+- exclude monetization opportunities
+- exclude speculative growth items
+- extract only concrete code defects, regressions, broken flows, or tracker hygiene defects directly tied to code work
+
 ## Idempotency Contract
 
 Safe to run repeatedly.
@@ -144,6 +157,8 @@ Not allowed:
 - generic observations with no action
 - examples or hypotheticals
 - "could maybe someday" speculation
+
+If the user explicitly limits the run to code issues only, a candidate also fails Gate 1 when it is merely an opportunity framed as a bug.
 
 ### Gate 2: Stack-fit
 
@@ -186,6 +201,12 @@ Misfiled issues are not “new.” They are routing mistakes.
 - If a real implementation item exists in `Oulang Ideas & Inspirations`, move it into `samihalawa/2026-MANUS-oulang`.
 - Only create a fresh issue when the action is materially different, not just better filed.
 
+Already-completed issues are not “new” either.
+
+- Before creating, extending, moving, or reopening a code issue, verify that it is not already obviously completed in the current project state.
+- Do not rely on repo docs or prior audit markdown alone to close or reopen a code issue when current repo or live evidence is available.
+- For code issues, current repo state and current live verification outrank historical docs.
+
 ## Candidate Scoring
 
 Use this scoring lens before creating anything:
@@ -226,6 +247,13 @@ list_issues(project="Oulang Ideas & Inspirations", team="Pime", limit=250)
 ```
 
 Build a compact inventory of likely duplicates.
+
+For code-focused runs, also mark each close match as one of:
+
+- `open and still relevant`
+- `already completed`
+- `misfiled`
+- `stale/hallucinated`
 
 Also build a compact inventory of likely routing mistakes:
 
@@ -275,6 +303,8 @@ If an issue already exists and the conversation adds real value:
 then update that issue instead of creating a sibling ticket.
 
 Only create a new issue when the task is materially separate.
+
+Never end a cleanup or extraction pass with “completed” language while the checklist still shows unresolved extraction or dedupe steps.
 
 If the issue already exists but is in the wrong project:
 
