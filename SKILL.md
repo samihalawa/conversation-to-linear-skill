@@ -83,6 +83,39 @@ Tool discovery is not enough by itself.
 
 If comments are unsupported, extend existing issues by updating the issue description with `save_issue(id=...)` only when the addition is clearly valuable and non-destructive.
 
+## Issue Quality Standard
+
+Every issue this skill creates or materially extends should be optimized for fast execution by coding agents.
+
+Prefer updating an existing issue over creating a new one when the action is materially the same.
+
+When writing or rewriting issue content:
+
+- keep it shorter, clearer, and cheaper to execute
+- remove stale hypotheses, repeated backstory, and long narrative prose
+- make the work type explicit when the title alone does not already do it:
+  - `code bug`
+  - `UX improvement`
+  - `AI behavior improvement`
+  - `analytics investigation`
+  - `verification-only work`
+  - `architecture or refactor work`
+- do not present analytics spikes, external verification tasks, or policy questions as confirmed implementation bugs unless the evidence proves that framing
+- for implementation-oriented work, tighten around:
+  - trigger
+  - observed behavior
+  - expected behavior
+  - likely area
+  - boundaries or non-goals when useful
+- for analytics or verification work, say clearly:
+  - what is known
+  - what still needs proof
+  - what is out of scope
+- for refactor or architecture work, frame it as deliberate structural work with guardrails, not as an urgent product defect
+- for umbrella issues, keep the parent concise and move execution detail into sub-issues
+- when nearby issues overlap, prefer linking and extending rather than leaving duplicate sibling narratives
+- relabel work when the current labels misclassify improvements as bugs or bugs as ideas
+
 ## Two Modes
 
 ### 1. Current-thread mode
@@ -304,6 +337,8 @@ then update that issue instead of creating a sibling ticket.
 
 Only create a new issue when the task is materially separate.
 
+When extending an existing issue, prefer rewriting it into a cleaner execution shape instead of appending another long narrative block.
+
 Never end a cleanup or extraction pass with “completed” language while the checklist still shows unresolved extraction or dedupe steps.
 
 If the issue already exists but is in the wrong project:
@@ -349,6 +384,14 @@ For code issues:
 - concrete current problem
 - expected outcome
 - key evidence if relevant
+
+For all issue types, prefer compact sections over prose walls. A good default structure is:
+
+- `Work type`
+- `Current fact pattern`
+- `Action`
+- `Boundaries`
+- `Related issues` when overlap matters
 
 Do not dump raw logs or giant analysis text into the issue.
 
